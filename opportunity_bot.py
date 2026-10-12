@@ -23,10 +23,20 @@ DB_FILE = "opportunities.db"
 # KEYWORD FILTERS
 # ==========================================
 JOB_KEYWORDS = [
+    # Instructional Design & EdTech
     "instructional designer", "learning experience designer", "learning designer",
     "curriculum designer", "instructional technologist", "l&d specialist",
-    "learning and development", "education program manager", "education officer",
-    "e-learning specialist", "digital learning", "mel officer", "monitoring evaluation"
+    "learning and development", "e-learning specialist", "digital learning", 
+    "education innovation",
+    
+    # Teaching & Pedagogy (TSC / Kenya relevant)
+    "teacher", "curriculum specialist", "education officer", "education facilitator",
+    "stem teacher", "pedagogy", "curriculum developer", "education specialist",
+    "lead educator", "tutor coordinator",
+    
+    # Program & Impact Roles
+    "education program manager", "mel officer", "monitoring evaluation", 
+    "youth development officer", "capacity building"
 ]
 
 FUNDING_KEYWORDS = [
@@ -84,13 +94,25 @@ def fetch_reliefweb_jobs():
     
     payload = {
         "filter": {
-            "operator": "OR",
+            "operator": "AND",
             "conditions": [
-                {"field": "theme", "value": "Education"},
-                {"field": "theme", "value": "Monitoring and Evaluation"}
+                {
+                    "operator": "OR",
+                    "conditions": [
+                        {"field": "theme", "value": "Education"},
+                        {"field": "theme", "value": "Monitoring and Evaluation"}
+                    ]
+                },
+                {
+                    "operator": "OR",
+                    "conditions": [
+                        {"field": "country.name", "value": "Kenya"},
+                        {"field": "type", "value": "Job"}
+                    ]
+                }
             ]
         },
-        "fields": {"include": ["title", "url", "source", "body"]}
+        "fields": {"include": ["title", "url", "source", "country"]}
     }
     
     try:
