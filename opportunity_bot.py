@@ -13,9 +13,9 @@ from datetime import datetime
 # ==========================================
 # CONFIGURATION
 # ==========================================
-GMAIL_SENDER = os.getenv("GMAIL_SENDER", "YOUR_GMAIL@gmail.com")
-GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "YOUR_16_CHAR_APP_PASSWORD")
-RECIPIENT_EMAIL = os.getenv("RECIPIENT_EMAIL", "YOUR_GMAIL@gmail.com")
+GMAIL_SENDER = os.getenv("GMAIL_SENDER")
+GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
+RECIPIENT_EMAIL = os.getenv("RECIPIENT_EMAIL")
 
 DB_FILE = "opportunities.db"
 
