@@ -111,75 +111,89 @@ def evaluate_with_ai(title, org, snippet):
     return {"match_score": 75, "deadline": "Check post", "winning_pitch": "Leverage your teaching and LXD expertise.", "is_eligible": True}
 
 # ==========================================
-# COLLECTORS
+# ROBUST JOB COLLECTORS
 # ==========================================
-def fetch_reliefweb():
-    """UN, NGOs, and Kenya/Remote Education Roles"""
-    results = []
-    url = "https://api.reliefweb.int/v1/jobs?appname=opportunity_bot&limit=25"
-    payload = {
-        "filter": {
-            "operator": "AND",
-            "conditions": [
-                {
-                    "operator": "OR",
-                    "conditions": [
-                        {"field": "theme", "value": "Education"},
-                        {"field": "theme", "value": "Monitoring and Evaluation"}
-                    ]
-                },
-                {
-                    "operator": "OR",
-                    "conditions": [
-                        {"field": "country.name", "value": "Kenya"},
-                        {"field": "type", "value": "Job"}
-                    ]
-                }
-            ]
-        },
-        "fields": {"include": ["title", "url", "source", "body-html"]}
-    }
-    
-    try:
-        res = requests.post(url, json=payload, timeout=15).json()
-        for item in res.get("data", []):
-            item_id = str(item.get("id"))
-            if is_new(item_id):
-                fields = item.get("fields", {})
-                results.append({
-                    "id": item_id,
-                    "title": fields.get("title", ""),
-                    "org": fields.get("source", [{}])[0].get("name", "International NGO"),
-                    "url": fields.get("url", ""),
-                    "category": "Education, NGO & Pedagogy Roles",
-                    "snippet": fields.get("title", "")
-                })
-    except Exception as e:
-        print(f"Error ReliefWeb: {e}")
-    return results
 
-def fetch_remotive():
-    """Global Remote Instructional Design & EdTech"""
+def fetch_reliefweb():
+    """UN, NGOs, and Kenya Education / Teaching Roles via clean GET query"""
     results = []
-    url = "https://remotive.com/api/remote-jobs?category=all&limit=35"
-    keywords = ["instructional", "learning", "curriculum", "education", "training", "pedagogy"]
+    # Search specifically for Kenya, Education, Teaching, and Curriculum roles
+    url = "https://api.reliefweb.int/v1/jobs?appname=opportunity_bot&limit=30&preset=latest&query[value]=(Kenya+OR+Africa)+AND+(Education+OR+Teacher+OR+Curriculum+OR+Instructional+OR+Learning+OR+Officer)"
     
     try:
         res = requests.get(url, timeout=15).json()
-        for job in res.get("jobs", []):
-            job_id = str(job.get("id"))
-            title = job.get("title", "")
-            if any(k in title.lower() for k in keywords) and is_new(job_id):
+        for item in res.get("data", []):
+            item_id = str(item.get("id"))
+            fields = item.get("fields", {})
+            title = fields.get("title", "")
+            apply_url = fields.get("url", "")
+            
+            # Extract organization name cleanly
+            sources = fields.get("source", [])
+            org = sources[0].get("name", "International NGO / UN") if sources else "NGO"
+            
+            if is_new(item_id):
                 results.append({
-                    "id": job_id,
+                    "id": item_id,
                     "title": title,
-                    "org": job.get("company_name", "Remote Firm"),
-                    "url": job.get("url", ""),
-                    "category": "Global Remote LXD & EdTech",
-                    "snippet": job.get("description", "")[:400]
+                    "org": org,
+                    "url": apply_url,
+                    "category": "Education, NGO & Pedagogy Roles",
+                    "snippet": f"{title} at {org}. Location: Kenya / Regional."
                 })
     except Exception as e:
-        print(f"Error Remotive: {e}")
+        print(f"Error fetching ReliefWeb: {e}")
+        
+    return results
+
+def fetch_remotive():
+    """Global Remote Instructional Design, Learning, and EdTech Roles"""
+    results = []
+    # Search across 3 targeted keywords
+    search_terms = ["instructional", "learning", "curriculum", "trainer"]
+    
+    for term in search_terms:
+        url = f"https://remotive.com/api/remote-jobs?search={term}"
+        try:
+            res = requests.get(url, timeout=15).json()
+            for job in res.get("jobs", []):
+                job_id = str(job.get("id"))
+                title = job.get("title", "")
+                
+                if is_new(job_id):
+                    results.append({
+                        "id": job_id,
+                        "title": title,
+                        "org": job.get("company_name", "Remote Company"),
+                        "url": job.get("url", ""),
+                        "category": "Global Remote LXD & EdTech",
+                        "snippet": f"{title} - {job.get('candidate_required_location', 'Remote')}. {job.get('description', '')[:300]}"
+                    })
+        except Exception as e:
+            print(f"Error Remotive ({term}): {e}")
+            
+    return results
+
+def fetch_weworkremotely():
+    """Bonus: High-paying global remote management, design & education roles"""
+    results = []
+    feed_url = "https://weworkremotely.com/categories/remote-all-other-jobs.rss"
+    try:
+        feed = feedparser.parse(feed_url)
+        keywords = ["instructional", "learning", "curriculum", "educat", "training", "course", "lxd"]
+        for entry in feed.entries:
+            title = entry.title
+            if any(k in title.lower() for k in keywords) and is_new(entry.link):
+                results.append({
+                    "id": entry.link,
+                    "title": title,
+                    "org": "WeWorkRemotely Listing",
+                    "url": entry.link,
+                    "category": "Global Remote LXD & EdTech",
+                    "snippet": entry.get("summary", "")[:300]
+                })
+    except Exception as e:
+        print(f"Error WeWorkRemotely: {e}")
     return results
 
 def fetch_opportunity_desk():
@@ -303,6 +317,7 @@ def run_pipeline():
     raw = []
     raw.extend(fetch_reliefweb())
     raw.extend(fetch_remotive())
+    raw.extend(fetch_weworkremotely()) 
     raw.extend(fetch_opportunity_desk())
     print(f"-> Harvested {len(raw)} potential new items.")
 
